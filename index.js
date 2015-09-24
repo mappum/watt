@@ -1,8 +1,14 @@
 var EventEmitter = require('events').EventEmitter
 var util = require('util')
 
-var Watt = module.exports = function (gen, cb) {
-  if (!(this instanceof Watt)) return new Watt(gen, cb)
+var Watt = module.exports = function (gen, args, cb) {
+  if (!(this instanceof Watt)) return new Watt(gen, args, cb)
+
+  if (typeof args === 'function') {
+    cb = args
+    args = null
+  }
+  args = args || []
 
   this._cb = cb || (err => { if (err) this.emit('error', err) })
   this._raceGroup = Symbol()
@@ -15,16 +21,40 @@ var Watt = module.exports = function (gen, cb) {
   W.race = this.race.bind(this)
   W.select = this.select.bind(this)
 
-  this.iterator = gen(W)
-  this.next()
+  this.iterator = gen.apply(this, args.concat([ W ]))
 }
 util.inherits(Watt, EventEmitter)
+
+Watt.run = function (gen, args, cb) {
+  Watt(gen, args, cb).run()
+}
+
+Watt.wrap = function (gen) {
+  return function () {
+    var args = Array.prototype.slice.call(arguments, 0)
+    var cb
+    if (typeof args[args.length - 1] === 'function') {
+      cb = args[args.length - 1]
+      args = args.slice(0, -1)
+    }
+    Watt.run(gen, args, cb)
+  }
+}
+
+Watt.prototype.run = function (cb) {
+  if (cb) this._cb = cb
+  this.next()
+}
 
 Watt.prototype.next = function (v) {
   var self = this
   setImmediate(function () {
-    var res = self.iterator.next(v)
-    if (res.done) self._cb(null, res.value)
+    try {
+      var res = self.iterator.next(v)
+    } catch(err) {
+      self._cb(err)
+    }
+    if (res && res.done) self._cb(null, res.value)
   })
 }
 
