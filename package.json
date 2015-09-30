@@ -1,6 +1,6 @@
 {
   "name": "watt",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Powerful generator control flow",
   "main": "index.js",
   "scripts": {
