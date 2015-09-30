@@ -30,8 +30,7 @@ Watt.run = function (gen, args, cb) {
 }
 
 Watt.wrap = function (gen) {
-  return function () {
-    var args = Array.prototype.slice.call(arguments, 0)
+  return function (...args) {
     var cb
     if (typeof args[args.length - 1] === 'function') {
       cb = args[args.length - 1]
@@ -86,8 +85,7 @@ Watt.prototype.race = function (f) {
   f = f || this.cb
   var self = this
   var raceGroup = this._raceGroup
-  return function () {
-    var args = Array.prototype.slice.call(arguments, 0)
+  return function (...args) {
     setImmediate(function () {
       if (raceGroup !== self._raceGroup) return
       self._raceGroup = Symbol()
