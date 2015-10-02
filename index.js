@@ -12,6 +12,8 @@ var Watt = module.exports = function (gen, args, cb) {
 
   this._cb = cb || (err => { if (err) this.emit('error', err) })
   this._raceGroup = Symbol()
+  this._tasks = new Set()
+  this._taskResults = []
 
   var W = this.cb.bind(this)
   W.cb = this.cb.bind(this)
@@ -20,6 +22,8 @@ var Watt = module.exports = function (gen, args, cb) {
   W.arg = this.arg.bind(this)
   W.race = this.race.bind(this)
   W.select = this.select.bind(this)
+  W.parallel = this.parallel.bind(this)
+  W.sync = this.sync.bind(this)
 
   this.iterator = gen.apply(this, args.concat([ W ]))
 }
@@ -47,14 +51,13 @@ Watt.prototype.run = function (cb) {
 }
 
 Watt.prototype.next = function (v) {
-  var self = this
-  setImmediate(function () {
+  setImmediate(() => {
     try {
-      var res = self.iterator.next(v)
+      var res = this.iterator.next(v)
     } catch(err) {
-      self._cb(err)
+      this._cb(err)
     }
-    if (res && res.done) self._cb(null, res.value)
+    if (res && res.done) this._cb(null, res.value)
   })
 }
 
@@ -97,3 +100,23 @@ Watt.prototype.race = function (f) {
 }
 
 Watt.prototype.select = function () {}
+
+Watt.prototype.parallel = function (gen, args) {
+  var index = this._tasks.size
+  var task = new Watt(gen, args, (err, res) => {
+    this._tasks.delete(task)
+    this.error(err)
+    this._taskResults[index] = res
+    if (this._tasks.size === 0) {
+      this.emit('sync', this._taskResults)
+      this._taskResults = []
+    }
+  })
+  this._tasks.add(task)
+  task.run()
+}
+
+Watt.prototype.sync = function () {
+  if (this._tasks.size === 0) return this.next(null)
+  this.once('sync', this.arg(0))
+}
