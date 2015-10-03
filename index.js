@@ -13,6 +13,7 @@ var Watt = module.exports = function (gen, args, cb) {
   this._cb = cb || (err => { if (err) this.emit('error', err) })
   this._raceGroup = Symbol()
   this._tasks = new Set()
+  this._taskQueue = []
   this._taskResults = []
 
   var W = this.cb.bind(this)
@@ -101,12 +102,27 @@ Watt.prototype.race = function (f) {
 
 Watt.prototype.select = function () {}
 
-Watt.prototype.parallel = function (gen, args) {
-  var index = this._tasks.size
+Watt.prototype.parallel = function (opts, gen, args) {
+  if (typeof opts === 'function') {
+    args = gen
+    gen = opts
+    opts = {}
+  }
+
+  var index = opts.index = opts.index != null ? opts.index : this._tasks.size
+  if (opts.limit != null && this._tasks.size > opts.limit) {
+    this._taskQueue.push([ opts, gen, args ])
+    this._taskQueue.sort((a, b) => b[0].limit - a[0].limit)
+    return
+  }
+
   var task = new Watt(gen, args, (err, res) => {
     this._tasks.delete(task)
     this.error(err)
     this._taskResults[index] = res
+    while (this._taskQueue.length && this._taskQueue[0][0].limit >= this._tasks.size) {
+      this.parallel.apply(this, this._taskQueue.shift())
+    }
     if (this._tasks.size === 0) {
       this.emit('sync', this._taskResults)
       this._taskResults = []
