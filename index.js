@@ -42,7 +42,7 @@ Watt.wrap = function (gen) {
       cb = args[args.length - 1]
       args = args.slice(0, -1)
     }
-    Watt.run(gen, args, cb)
+    Watt.run(gen.bind(this), args, cb)
   }
 }
 
