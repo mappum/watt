@@ -2,7 +2,7 @@ var EventEmitter = require('events').EventEmitter
 var util = require('util')
 
 var Watt = module.exports = function (gen, args, opts, cb) {
-  if (!(this instanceof Watt)) return new Watt(gen, args, cb)
+  if (!(this instanceof Watt)) return new Watt(gen, args, opts, cb)
 
   if (typeof args === 'function') {
     cb = args
@@ -32,8 +32,8 @@ var Watt = module.exports = function (gen, args, opts, cb) {
   W.sync = this.sync.bind(this)
 
   var passedArgs
-  if (opts.prepend) passedArgs = args.concat([ W ])
-  else passedArgs = ([ W ]).concat(args)
+  if (opts.prepend) passedArgs = ([ W ]).concat(args)
+  else passedArgs = args.concat([ W ])
   this.iterator = gen.apply(this, passedArgs)
 }
 util.inherits(Watt, EventEmitter)
