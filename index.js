@@ -1,14 +1,19 @@
 var EventEmitter = require('events').EventEmitter
 var util = require('util')
 
-var Watt = module.exports = function (gen, args, cb) {
+var Watt = module.exports = function (gen, args, opts, cb) {
   if (!(this instanceof Watt)) return new Watt(gen, args, cb)
 
   if (typeof args === 'function') {
     cb = args
     args = null
+    opts = {}
+  } else if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
   }
   args = args || []
+  opts = opts || {}
 
   this._cb = cb || (err => { if (err) this.emit('error', err) })
   this._raceGroup = Symbol()
@@ -26,24 +31,34 @@ var Watt = module.exports = function (gen, args, cb) {
   W.parallel = this.parallel.bind(this)
   W.sync = this.sync.bind(this)
 
-  this.iterator = gen.apply(this, args.concat([ W ]))
+  var passedArgs
+  if (opts.prepend) passedArgs = args.concat([ W ])
+  else passedArgs = ([ W ]).concat(args)
+  this.iterator = gen.apply(this, passedArgs)
 }
 util.inherits(Watt, EventEmitter)
 
-Watt.run = function (gen, args, cb) {
-  Watt(gen, args, cb).run()
+Watt.run = function (gen, args, opts, cb) {
+  Watt(gen, args, opts, cb).run()
 }
 
-Watt.wrap = function (gen) {
+Watt.wrap = function (gen, opts) {
+  opts = opts || {}
   return function () {
     var args = Array.prototype.slice.call(arguments, 0)
     var cb
-    if (typeof args[args.length - 1] === 'function') {
+    if (!opts.noCallback && !opts.prepend && typeof args[args.length - 1] === 'function') {
       cb = args[args.length - 1]
       args = args.slice(0, -1)
     }
-    Watt.run(gen.bind(this), args, cb)
+    Watt.run(gen.bind(this), args, opts, cb)
   }
+}
+
+Watt.wrapPrepend = function (gen, opts) {
+  opts = opts || {}
+  opts.prepend = true
+  return Watt.wrap(gen, opts)
 }
 
 Watt.prototype.run = function (cb) {
@@ -55,7 +70,7 @@ Watt.prototype.next = function (v) {
   setImmediate(() => {
     try {
       var res = this.iterator.next(v)
-    } catch(err) {
+    } catch (err) {
       this._cb(err)
     }
     if (res && res.done) this._cb(null, res.value)
