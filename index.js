@@ -82,6 +82,9 @@ Watt.prototype.onRes = function (res) {
   if (res.done) {
     return this._cb(null, res.value)
   }
+  if (res.value instanceof Promise) {
+    res.value.then(this.next.bind(this), this.error.bind(this))
+  }
 }
 
 Watt.prototype.cb = function (err, v) {
