@@ -71,10 +71,17 @@ Watt.prototype.next = function (v) {
     try {
       var res = this.iterator.next(v)
     } catch (err) {
-      this._cb(err)
+      return this._cb(err)
     }
-    if (res && res.done) this._cb(null, res.value)
+    this.onRes(res)
   })
+}
+
+Watt.prototype.onRes = function (res) {
+  if (!res) return
+  if (res.done) {
+    return this._cb(null, res.value)
+  }
 }
 
 Watt.prototype.cb = function (err, v) {
@@ -83,11 +90,13 @@ Watt.prototype.cb = function (err, v) {
 }
 
 Watt.prototype.error = function (err) {
+  if (!err) return
   try {
-    if (err) this.iterator.throw(err)
+    var res = this.iterator.throw(err)
   } catch (e) {
-    this._cb(err)
+    return this._cb(err)
   }
+  this.onRes(res)
 }
 
 Watt.prototype.args = function () {
