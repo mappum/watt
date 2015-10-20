@@ -15,7 +15,7 @@ var Watt = module.exports = function (gen, args, opts, cb) {
   args = args || []
   opts = opts || {}
 
-  this._cb = cb || (err => { if (err) this.emit('error', err) })
+  this._cb = cb
   this._raceGroup = Symbol()
   this._tasks = new Set()
   this._taskQueue = []
@@ -39,7 +39,7 @@ var Watt = module.exports = function (gen, args, opts, cb) {
 util.inherits(Watt, EventEmitter)
 
 Watt.run = function (gen, args, opts, cb) {
-  Watt(gen, args, opts, cb).run()
+  return Watt(gen, args, opts, cb).run()
 }
 
 Watt.wrap = function (gen, opts) {
@@ -47,11 +47,11 @@ Watt.wrap = function (gen, opts) {
   return function () {
     var args = Array.prototype.slice.call(arguments, 0)
     var cb
-    if (!opts.noCallback && !opts.prepend && typeof args[args.length - 1] === 'function') {
+    if (!opts.noCallback && typeof args[args.length - 1] === 'function') {
       cb = args[args.length - 1]
       args = args.slice(0, -1)
     }
-    Watt.run(gen.bind(this), args, opts, cb)
+    return Watt.run(gen.bind(this), args, opts, cb)
   }
 }
 
@@ -62,7 +62,34 @@ Watt.wrapPrepend = function (gen, opts) {
 }
 
 Watt.prototype.run = function (cb) {
-  if (cb) this._cb = cb
+  if (cb) {
+    this._cb = cb
+  } else if (!this._cb) {
+    // if no cb is specified, return a Promise instead
+    this._promise = new Promise((resolve, reject) => {
+      this._cb = (err, res) => {
+        if (err) {
+          if (!handlingReject) throw err
+          return reject(err)
+        }
+        resolve(res)
+      }
+      this.next()
+    })
+    // hack to check if the consumer is checking for rejections
+    var handlingReject = false
+    var then = this._promise.then.bind(this._promise)
+    var _catch = this._promise.catch.bind(this._promise)
+    this._promise.then = (onFulfilled, onRejected) => {
+      if (onRejected) handlingReject = true
+      then(onFulfilled, onRejected)
+    }
+    this._promise.catch = (onRejected) => {
+      if (onRejected) handlingReject = true
+      _catch(onRejected)
+    }
+    return this._promise
+  }
   this.next()
 }
 
