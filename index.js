@@ -69,7 +69,15 @@ Watt.prototype.run = function (cb) {
     this._promise = new Promise((resolve, reject) => {
       this._cb = (err, res) => {
         if (err) {
-          if (!handlingReject) throw err
+          if (!handlingReject) {
+            if (process.listeners('uncaughtException').length) {
+              return process.emit('uncaughtException', err)
+            } else {
+              // ensure errors don't happen silently
+              console.error(err.stack ? err.stack : err)
+              process.exit(1)
+            }
+          }
           return reject(err)
         }
         resolve(res)
