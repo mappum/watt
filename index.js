@@ -1,5 +1,6 @@
 var EventEmitter = require('events').EventEmitter
 var util = require('util')
+require('setimmediate')
 
 var Watt = module.exports = function (gen, args, opts, cb) {
   if (!(this instanceof Watt)) return new Watt(gen, args, opts, cb)
