@@ -3,8 +3,6 @@ var util = require('util')
 require('setimmediate')
 
 var Watt = module.exports = function (gen, args, opts, cb) {
-  if (!(this instanceof Watt)) return new Watt(gen, args, opts, cb)
-
   if (typeof args === 'function') {
     cb = args
     args = null
@@ -15,6 +13,9 @@ var Watt = module.exports = function (gen, args, opts, cb) {
   }
   args = args || []
   opts = opts || {}
+  opts.context = opts.context || this
+
+  if (!(this instanceof Watt)) return new Watt(gen, args, opts, cb)
 
   this._cb = cb
   this._raceGroup = Symbol()
@@ -35,7 +36,7 @@ var Watt = module.exports = function (gen, args, opts, cb) {
   var passedArgs
   if (opts.prepend) passedArgs = ([ W ]).concat(args)
   else passedArgs = args.concat([ W ])
-  this.iterator = gen.apply(this, passedArgs)
+  this.iterator = gen.apply(opts.context || this, passedArgs)
 }
 util.inherits(Watt, EventEmitter)
 
@@ -52,7 +53,8 @@ Watt.wrap = function (gen, opts) {
       cb = args[args.length - 1]
       args = args.slice(0, -1)
     }
-    return Watt.run(gen.bind(this), args, opts, cb)
+    if (!opts.context) opts.context = this
+    return Watt.run(gen, args, opts, cb)
   }
 }
 
@@ -71,12 +73,12 @@ Watt.prototype.run = function (cb) {
       this._cb = (err, res) => {
         if (err) {
           if (!handlingReject) {
-            if (process.listeners('uncaughtException').length) {
+            if (process.listeners && process.listeners('uncaughtException').length) {
               return process.emit('uncaughtException', err)
             } else {
               // ensure errors don't happen silently
               console.error(err.stack ? err.stack : err)
-              process.exit(1)
+              if (process.exit) process.exit(1)
             }
           }
           return reject(err)
