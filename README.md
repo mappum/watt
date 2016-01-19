@@ -107,7 +107,7 @@ yield someWritableStream.on('end', next)
 ```
 In this example, if `stream` encounters an error while we are waiting for it to pipe to `someWritableStream`, we will abort waiting for the piping to finish and will throw the error.
 
-#### next.arg(n, [ignoreError])
+#### `next.arg(n, [ignoreError])`
 
 A callback which can be supplied to async functions to get the `n`th argument. Used as an alternative to `next`, which defaults to the 1st argument (the 0th argument is the error).
 
@@ -118,7 +118,7 @@ For example if we want to call `request(url, cb)` which calls `cb` with `cb(err,
 var body = yield request(url, next.arg(2))
 ```
 
-#### next.args()
+#### `next.args()`
 
 A callback which can be supplied to async functions to get all of the arguments passed to it. This function does not do any automatic error handling, since the error will be included in the arguments returned. The result returned is the function's `arguments` object.
 
@@ -134,9 +134,9 @@ var data = args[1]
 #### - Loops
 Print numbers from 0 to n, one per second
 
-Without `watt`, we need to use the `async` library to set up an array of functions, one per iteration.
-
 **Before `watt`:**
+
+Without `watt`, we need to use the `async` library to set up an array of functions, one per iteration.
 ```js
 var async = require('async')
 
@@ -156,9 +156,9 @@ function countUp (n, cb) {
 }
 ```
 
-With `watt`, you only need a standard Javascript `for` loop.
-
 **After `watt`:**
+
+With `watt`, you only need a standard Javascript `for` loop.
 ```js
 var async = require('watt')
 
@@ -172,6 +172,6 @@ var countUp = async(function * (n, next) {
 
 ## Alternatives
 
-- ### [`co`](https://github.com/tj/co)
+### - [`co`](https://github.com/tj/co)
 
 `co` is similar to `watt`, but the main difference is that it only works with Promises. It requires that you convert callback functions to return Promises before you can call them, and it does not let you wrap generators with a callback API.
