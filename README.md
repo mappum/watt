@@ -66,9 +66,9 @@ copyFile('a', 'b', function (err) {
 
 #### `watt( generator([args...],next), [opts] )`
 
-Wraps a generator and returns a callable function. The returned function can be called with `fn([args...], callback)`, and `([args...], next)` will be passed to `generator`.
+Wraps a generator and returns a callable function. The returned function can be called with `fn([args...], [callback])`, and `([args...], next)` will be passed to `generator`.
 
-The user-supplied `callback` is removed from `args` and will not be passed to the generator. `callback` will be automatically called with `callback(error, returned)` after the generator returns or throws an error.
+The user-supplied `callback` is removed from `args` and will not be passed to the generator. `callback` will be automatically called with `callback(error, returned)` after the generator returns or throws an error. If no callback is supplied (the last argument is not a function), a Promise will be returned instead. Note: if you don't want the last argument to be treated as a callback even if it is a function, you may set the `noCallback` option (see below).
 
 In the generator, `yield` should be called to wait for an async thing to happen, and `next` should be called to resume the generator. Alternatively, if a Promise is passed to `yield`, the generator will automatically resume once the Promise resolves (or will throw an error if it rejects).
 
