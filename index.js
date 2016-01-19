@@ -2,7 +2,7 @@ var EventEmitter = require('events').EventEmitter
 var util = require('util')
 require('setimmediate')
 
-var Watt = module.exports = function (gen, args, opts, cb) {
+function Watt (gen, args, opts, cb) {
   if (typeof args === 'function') {
     cb = args
     args = null
@@ -38,11 +38,11 @@ var Watt = module.exports = function (gen, args, opts, cb) {
 }
 util.inherits(Watt, EventEmitter)
 
-Watt.run = function (gen, args, opts, cb) {
+function run (gen, args, opts, cb) {
   return Watt(gen, args, opts, cb).run()
 }
 
-Watt.wrap = function (gen, opts) {
+function wrap (gen, opts) {
   if (typeof gen === 'object') {
     opts = gen
     return function (gen) {
@@ -59,15 +59,13 @@ Watt.wrap = function (gen, opts) {
       args = args.slice(0, -1)
     }
     if (!opts.context) opts.context = this
-    return Watt.run(gen, args, opts, cb)
+    return run(gen, args, opts, cb)
   }
 }
-
-Watt.wrapPrepend = function (gen, opts) {
-  opts = opts || {}
-  opts.prepend = true
-  return Watt.wrap(gen, opts)
-}
+module.exports = wrap
+module.exports.wrap = wrap
+module.exports.run = run
+module.exports.Watt = Watt
 
 Watt.prototype.run = function (cb) {
   if (cb) {
