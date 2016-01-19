@@ -109,7 +109,7 @@ In this example, if `stream` encounters an error while we are waiting for it to 
 
 #### `next.arg(n, [ignoreError])`
 
-A callback which can be supplied to async functions to get the `n`th argument. Used as an alternative to `next`, which defaults to the 1st argument (the 0th argument is the error).
+A function that returns a callback which can be supplied to async functions to get the `n`th argument. Used as an alternative to `next`, which defaults to the 1st argument (the 0th argument is the error).
 
 If `ignoreError` is truthy, the 0th argument won't be thrown as an error. If `n` is 0, `ignoreError` is implied to be `true`.
 
