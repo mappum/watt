@@ -28,8 +28,6 @@ var Watt = module.exports = function (gen, args, opts, cb) {
   W.error = this.error.bind(this)
   W.args = this.args.bind(this)
   W.arg = this.arg.bind(this)
-  W.race = this.race.bind(this)
-  W.select = this.select.bind(this)
   W.parallel = this.parallel.bind(this)
   W.sync = this.sync.bind(this)
 
@@ -45,6 +43,13 @@ Watt.run = function (gen, args, opts, cb) {
 }
 
 Watt.wrap = function (gen, opts) {
+  if (typeof gen === 'object') {
+    opts = gen
+    return function (gen) {
+      return Watt.wrap(gen, opts)
+    }
+  }
+
   opts = opts || {}
   return function () {
     var args = Array.prototype.slice.call(arguments, 0)
@@ -144,28 +149,17 @@ Watt.prototype.args = function () {
   this.next(arguments)
 }
 
-Watt.prototype.arg = function (n) {
+Watt.prototype.arg = function (n, ignoreError) {
   var self = this
-  var output = function () { self.next(arguments[n]) }
-  output.race = this.race(output)
+  if (n === 0) ignoreError = true
+  var output = function (err) {
+    if (!ignoreError && err) {
+      return self.error(err)
+    }
+    self.next(arguments[n])
+  }
   return output
 }
-
-Watt.prototype.race = function (f) {
-  f = f || this.cb
-  var self = this
-  var raceGroup = this._raceGroup
-  return function () {
-    var args = Array.prototype.slice.call(arguments, 0)
-    setImmediate(function () {
-      if (raceGroup !== self._raceGroup) return
-      self._raceGroup = Symbol()
-      f.apply(self, args)
-    })
-  }
-}
-
-Watt.prototype.select = function () {}
 
 Watt.prototype.parallel = function (opts, gen, args) {
   if (typeof opts === 'function') {
