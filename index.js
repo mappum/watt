@@ -38,10 +38,6 @@ function Watt (gen, args, opts, cb) {
 }
 util.inherits(Watt, EventEmitter)
 
-function run (gen, args, opts, cb) {
-  return Watt(gen, args, opts, cb).run()
-}
-
 function wrap (gen, opts) {
   if (typeof gen === 'object') {
     opts = gen
@@ -59,12 +55,11 @@ function wrap (gen, opts) {
       args = args.slice(0, -1)
     }
     if (!opts.context) opts.context = this
-    return run(gen, args, opts, cb)
+    return Watt(gen, args, opts, cb).run()
   }
 }
 module.exports = wrap
 module.exports.wrap = wrap
-module.exports.run = run
 module.exports.Watt = Watt
 
 Watt.prototype.run = function (cb) {
