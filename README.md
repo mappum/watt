@@ -19,7 +19,7 @@ ES6 introduced generators, which are functions that can be paused and resumed us
 - Compatible with the Node callback convention, as well as Promises
 - Call your watt functions with callbacks, you don't have to change your API
 
-**Berfore `watt`:**
+**Before `watt`:**
 
 ```js
 function copyFile (source, dest, callback) {
