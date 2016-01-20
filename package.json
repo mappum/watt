@@ -4,7 +4,7 @@
   "description": "Powerful generator control flow",
   "main": "index.js",
   "scripts": {
-    "test": "standard && tap test/*.js"
+    "test": "standard && tap test.js"
   },
   "author": "Matt Bell <mappum@gmail.com>",
   "license": "MIT",
