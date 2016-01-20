@@ -18,6 +18,8 @@ function Watt (gen, args, opts, cb) {
   if (!(this instanceof Watt)) return new Watt(gen, args, opts, cb)
 
   this._cb = cb
+  this._cbCalled = false
+
   this._raceGroup = Symbol()
   this._tasks = new Set()
   this._taskQueue = []
@@ -61,6 +63,13 @@ function wrap (gen, opts) {
 module.exports = wrap
 module.exports.wrap = wrap
 module.exports.Watt = Watt
+
+Watt.prototype._callCb = function () {
+  if (this._cbCalled) return
+  this._cbCalled = true
+  var args = Array.prototype.slice.call(arguments, 0)
+  this._cb.apply(this, args)
+}
 
 Watt.prototype.run = function (cb) {
   if (cb) {
@@ -107,7 +116,7 @@ Watt.prototype.next = function (v) {
     try {
       var res = this.iterator.next(v)
     } catch (err) {
-      return this._cb(err)
+      return this._callCb(err)
     }
     this.onRes(res)
   })
@@ -116,7 +125,7 @@ Watt.prototype.next = function (v) {
 Watt.prototype.onRes = function (res) {
   if (!res) return
   if (res.done) {
-    return this._cb(null, res.value)
+    return this._callCb(null, res.value)
   }
   if (res.value instanceof Promise) {
     res.value.then(this.next.bind(this), this.error.bind(this))
@@ -133,7 +142,7 @@ Watt.prototype.error = function (err) {
   try {
     var res = this.iterator.throw(err)
   } catch (e) {
-    return this._cb(err)
+    return this._callCb(err)
   }
   this.onRes(res)
 }
