@@ -62,9 +62,7 @@ copyFile('a', 'b', function (err) {
 
 `npm install watt`
 
-### Reference
-
-#### `watt( generator([args...],next), [opts] )`
+### `watt( generator([args...],next), [opts] )`
 
 Wraps a generator and returns a callable function. The returned function can be called with `fn([args...], [callback])`, and `([args...], next)` will be passed to `generator`.
 
@@ -90,13 +88,15 @@ In the generator, `yield` should be called to wait for an async thing to happen,
 }
 ```
 
-#### `next(error, result)`
+----
+### `next(error, result)`
 
 The `next` function is passed to `watt` generators, and is used to unpause the generator after it has `yield`ed. `next` should be passed to async functions to "return" their results to the generator and resume execution.
 
 If `error` is truthy, the generator will throw an error. Otherwise, `result` will be passed to the most recent `yield` expression.
 
-#### `next.error(error)`
+----
+### `next.error(error)`
 
 If `error` is truthy, the generator will throw an error. This is useful when you want your generator to throw an error after an `error` event. For example:
 ```js
@@ -107,7 +107,8 @@ yield someWritableStream.on('end', next)
 ```
 In this example, if `stream` encounters an error while we are waiting for it to pipe to `someWritableStream`, we will abort waiting for the piping to finish and will throw the error.
 
-#### `next.arg(n, [ignoreError])`
+----
+### `next.arg(n, [ignoreError])`
 
 A function that returns a callback which can be supplied to async functions to get the `n`th argument. Used as an alternative to `next`, which defaults to the 1st argument (the 0th argument is the error).
 
@@ -118,7 +119,8 @@ For example if we want to call `request(url, cb)` which calls `cb` with `cb(err,
 var body = yield request(url, next.arg(2))
 ```
 
-#### `next.args()`
+----
+### `next.args()`
 
 A callback which can be supplied to async functions to get all of the arguments passed to it. This function does not do any automatic error handling, since the error will be included in the arguments returned. The result returned is the function's `arguments` object.
 
@@ -129,36 +131,64 @@ var error = args[0]
 var data = args[1]
 ```
 
-### Examples
+## Examples
 
-#### - Loops
-Print numbers from 0 to n, one per second
+### Iterating through an array
+Iterate through an array of file paths until we find one that exists.
 
 **Before `watt`:**
 
-Without `watt`, we need to use the `async` library to set up an array of functions, one per iteration.
+Without `watt`, we need to use the `async` module.
 ```js
 var async = require('async')
 
-function countUp (n, cb) {
-  var tasks = []
-  for (var i = 0; i <= n; i++) {
-    (function (i) {
-      tasks.push(function (cb) {
-        setTimeout(function () {
-          console.log(i)
-          cb()
-        }, 1000)
-      })
-    })(i)
-  }
-  async.series(tasks, cb)
+function firstExisting (paths, cb) {
+  async.eachSeries(paths, function (path, next) {
+    fs.exists(path, function (err, exists) {
+      if (err) return cb(err)
+      if (exists) return cb(path)
+      next()
+    })
+  })
 }
 ```
 
 **After `watt`:**
 
-With `watt`, you only need a standard Javascript `for` loop.
+With `watt`, we can use a standard Javascript `for` loop.
+```js
+var async = require('watt')
+
+var firstExisting = async(function * (paths, next) {
+  for (var path of paths) {
+    if (yield fs.exists(path, next)) return path
+  }
+})
+```
+----
+### Iterating through a range
+Print numbers from 0 to n, one per second.
+
+**Before `watt`:**
+
+Without `watt`, we need to use recursion. This isn't too complex, however it is slightly less readable than it would be if it were synchronous.
+```js
+var async = require('async')
+
+function countUp (n, cb) {
+  function next (i) {
+    setTimeout(function () {
+      console.log(i)
+      next(i + 1)
+    }, 1000)
+  }
+  next(0)
+}
+```
+
+**After `watt`:**
+
+With `watt`, we can use a standard Javascript `for` loop.
 ```js
 var async = require('watt')
 
@@ -168,6 +198,55 @@ var countUp = async(function * (n, next) {
     console.log(i)
   }
 })
+```
+----
+### `if` statements
+An ugly part of using async callbacks is that the syntax gets ugly when branching. Consider a function that calls an async function `foo`, then depending on the result maybe calls `bar`, then finally calls `baz`:
+
+**Before `watt`:**
+```js
+function myAsyncFunc (cb) {
+  foo(function (err, res) {
+    if (err) return cb(err)
+    if (res) {
+      bar(function (err) {
+        if (err) return cb(err)
+        baz(cb)
+      })
+      return
+    }
+    baz(cb)
+  })
+}
+```
+
+**After `watt`:**
+```js
+var myAsyncFunc = async(function * (next) {
+  var res = yield foo(next)
+  if (res) yield bar(next)
+  return yield baz(next)
+}
+```
+
+----
+### Promises
+`watt` works well with Promises. If you `yield` a promise, its result will be returned if is resolves, or its error will be thrown if it is rejected.
+
+Additionally, `watt` functions return Promises if a callback is not provided, so you can call them from another `watt` generator without providing the `next` argument.
+
+```js
+var foo = async(function * (next) {
+  setTimeout(next, 1000)
+  return 'aslfdkj'
+}
+
+var bar = async(function * (next) {
+  return yield a() // 'next' not necessary
+})
+
+// callers can use the Promise API instead of a callback if they want
+bar().then(res => console.log(res))
 ```
 
 ## Alternatives
