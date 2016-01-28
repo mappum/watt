@@ -60,8 +60,29 @@ function wrap (gen, opts) {
     return Watt(gen, args, opts, cb).run()
   }
 }
+
+function wrapAll (object, opts) {
+  var names = Array.prototype.slice.call(arguments, typeof opts === 'object' ? 2 : 1)
+  if (typeof opts === 'string') opts = {}
+  opts = Object.assign({ context: this }, opts)
+
+  function wrapAndBind (name) {
+    object[name] = wrap(object[name], opts)
+  }
+
+  var name
+  if (names.length > 0) {
+    for (name of names) wrapAndBind(name)
+  } else {
+    for (name in object) {
+      if (object[name].constructor &&
+      object[name].constructor.name === 'GeneratorFunction') wrapAndBind(name)
+    }
+  }
+}
+
 module.exports = wrap
-module.exports.wrap = wrap
+module.exports.wrapAll = wrapAll
 module.exports.Watt = Watt
 
 Watt.prototype._callCb = function () {
