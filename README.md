@@ -4,11 +4,11 @@
 [![Build Status](https://travis-ci.org/mappum/watt.svg?branch=master)](https://travis-ci.org/mappum/watt)
 [![Dependency Status](https://david-dm.org/mappum/watt.svg)](https://david-dm.org/mappum/watt)
 
-Powerful control flow using generators
+**Powerful control flow using generators**
 
-`watt` lets you write your async Javascript without callbacks, which results in much cleaner, more readable code.
+`watt` lets you write your async Javascript as if it were synchronous, which results in much simpler, more readable code.
 
-ES6 introduced generators, which are functions that can be paused and resumed using the `yield` keyword. This lets us do some cool things, for instance letting a library handle control flow. This means your code can be written as if it was synchronous, but still gets the benefits of Node's async IO.
+ES6 introduced generators, which are functions that can be paused and resumed using the `yield` keyword. This lets us do some cool things, for instance letting a library handle control flow.
 
 **Features:**
 - Eliminates "callback hell"
@@ -17,7 +17,7 @@ ES6 introduced generators, which are functions that can be paused and resumed us
 - Use `try`/`catch` to handle async errors
 - Pass sync/async errors to the callback automatically (reducing boilerplate), or with `throw`
 - Compatible with the Node callback convention, as well as Promises
-- Call your watt functions with callbacks, you don't have to change your API
+- `watt` functions can be called with callbacks, you don't have to change your API
 
 **Before `watt`:**
 
@@ -62,9 +62,9 @@ copyFile('a', 'b', function (err) {
 
 `npm install watt`
 
-### `watt( generator([args...],next), [opts] )`
+### `watt( generatorFn([args...],next), [opts] )`
 
-Wraps a generator and returns a callable function. The returned function can be called with `fn([args...], [callback])`, and `([args...], next)` will be passed to `generator`.
+Wraps a generator function and returns a callable function. The returned function can be called with `fn([args...], [callback])`, and `([args...], next)` will be passed to `generatorFn`.
 
 The user-supplied `callback` is removed from `args` and will not be passed to the generator. `callback` will be automatically called with `callback(error, returned)` after the generator returns or throws an error. If no callback is supplied (the last argument is not a function), a Promise will be returned instead. Note: if you don't want the last argument to be treated as a callback even if it is a function, you may set the `noCallback` option (see below).
 
@@ -129,6 +129,45 @@ Example:
 var args = yield fs.readFile('file.txt', next.args)
 var error = args[0]
 var data = args[1]
+```
+
+----
+### `watt.wrapAll(object, [opts], [names...])`
+
+Wraps generator function properties of `object`. Each wrapped generator function gets bound to the context of `object`. If no values are specified for `names`, all generator function properties are wrapped. If one or more strings are specified for `names`, only the properties with those keys will be wrapped.
+
+`opts` can be an options object that will be passed to [`watt()`](#watt-generatorargsnext-opts-).
+
+This can be useful for wrapping generator methods of a class (call `watt.wrapAll(this)` in the constructor).
+
+```js
+var watt = require('watt')
+
+class MyClass {
+  constructor () {
+    this.a = 5
+
+    // do this to wrap both 'foo' and 'bar'
+    watt.wrapAll(this)
+
+    // do this to wrap only 'foo'
+    watt.wrapAll(this, 'foo')
+  }
+
+  // remember to prefix with * to make a generator
+  * foo (next) {
+    yield doAsyncThing(this.a, next)
+    return yield doAnotherAsyncThing(next)
+  }
+
+  * bar (next) {
+    yield foo()
+    return yield doAnotherAsyncThing(next)
+  }
+
+  var mc = new MyClass()
+  mc.foo((err, res) => { ... })
+}
 ```
 
 ## Examples
