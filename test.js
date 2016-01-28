@@ -270,3 +270,79 @@ test('next.error', t => {
     t.end()
   })
 })
+
+test('wrapAll', t => {
+  t.test('wrapAll', t => {
+    var obj = {
+      a: function * (a, b, next) {
+        yield setTimeout(next, 5)
+        return a + b
+      },
+      b: function * (a, b, next) {
+        yield setTimeout(next, 5)
+        return a + b
+      }
+    }
+    watt.wrapAll(obj)
+    t.equal(obj.a.constructor.name, 'Function', 'a is now a Function')
+    t.equal(obj.b.constructor.name, 'Function', 'b is now a Function')
+    obj.a(100, 23, (err, res) => {
+      t.error(err, 'no error')
+      t.ok(res, 'got response from call to a')
+      t.equal(res, 123, 'correct response')
+      t.end()
+    })
+  })
+
+  t.test('wrapAll with names', t => {
+    var obj = {
+      a: function * (a, b, next) {
+        yield setTimeout(next, 5)
+        return a + b
+      },
+      b: function * (a, b, next) {
+        yield setTimeout(next, 5)
+        return a + b
+      }
+    }
+    watt.wrapAll(obj, 'a')
+    t.equal(obj.a.constructor.name, 'Function', 'a is now a Function')
+    t.equal(obj.b.constructor.name, 'GeneratorFunction', 'b is still a GeneratorFunction')
+    obj.a(100, 23, (err, res) => {
+      t.error(err, 'no error')
+      t.ok(res, 'got response from call to a')
+      t.equal(res, 123, 'correct response')
+      t.end()
+    })
+  })
+
+  t.test('wrapAll with options', t => {
+    var obj = {
+      a: function * (a, b, next) {
+        yield setTimeout(next, 5)
+        return a + b
+      },
+      b: function * (next, a, b) {
+        yield setTimeout(next, 5)
+        return a + b
+      }
+    }
+    watt.wrapAll(obj, 'a')
+    watt.wrapAll(obj, { prepend: true }, 'b')
+    t.equal(obj.a.constructor.name, 'Function', 'a is now a Function')
+    t.equal(obj.b.constructor.name, 'Function', 'b is now a Function')
+    obj.a(100, 23, (err, res) => {
+      t.error(err, 'no error')
+      t.ok(res, 'got response from call to a')
+      t.equal(res, 123, 'correct response')
+      obj.b(100, 23, (err, res) => {
+        t.error(err, 'no error')
+        t.ok(res, 'got response from call to b')
+        t.equal(res, 123, 'correct response')
+        t.end()
+      })
+    })
+  })
+
+  t.end()
+})
