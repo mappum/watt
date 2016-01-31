@@ -346,3 +346,50 @@ test('wrapAll', t => {
 
   t.end()
 })
+
+test('parallel', t => {
+  t.test('simple parallel tasks', t => {
+    watt(function * (next) {
+      setTimeout(next.parallel(), 20, null, 0)
+      setTimeout(next.parallel(), 21, null, 1)
+      setTimeout(next.parallel(), 23, null, 2)
+      setTimeout(next.parallel(), 22, null, 3)
+      setTimeout(next.parallel().arg(0), 24, 4)
+      setTimeout(next.parallel().arg(1), 25, null, 5)
+      setTimeout(next.parallel().arg(1, true), 26, 5, 6)
+      setTimeout(next.parallel().args, 27, 6, 7)
+      var res = yield next.sync()
+      t.pass('resumed after sync')
+      t.ok(Array.isArray(res), 'got results')
+      t.equal(res[0], 0, 'correct res values')
+      t.equal(res[1], 1, 'correct res values')
+      t.equal(res[2], 2, 'correct res value order')
+      t.equal(res[3], 3, 'correct res value order')
+      t.equal(res[4], 4, 'correct res values with arg()')
+      t.equal(res[5], 5, 'correct res values with arg()')
+      t.equal(res[6], 6, 'correct res values with arg(n, true)')
+      t.equal(res[7][0], 6, 'correct res values with args')
+      t.equal(res[7][1], 7, 'correct res values with args')
+      t.end()
+    })()
+  })
+
+  t.test('parallel tasks with error', t => {
+    watt(function * (next) {
+      setTimeout(next.parallel(), 20, null, 0)
+      setTimeout(next.parallel(), 21, null, 1)
+      setTimeout(next.parallel(), 22, true, 2)
+      setTimeout(next.parallel(), 23, null, 3)
+      try {
+        var res = yield next.sync()
+      } catch (e) {
+        t.pass('error thrown')
+        t.equal(e, true, 'correct error value')
+        t.notOk(res, 'no result value')
+      }
+      t.end()
+    })()
+  })
+
+  t.end()
+})
