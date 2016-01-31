@@ -20,22 +20,15 @@ function Watt (gen, args, opts, cb) {
   this._cb = cb
   this._cbCalled = false
 
-  this._raceGroup = Symbol()
-  this._tasks = new Set()
-  this._taskQueue = []
-  this._taskResults = []
+  this._syncGroup = null
 
-  var W = this.cb.bind(this)
-  W.cb = this.cb.bind(this)
-  W.error = this.error.bind(this)
-  W.args = this.args.bind(this)
-  W.arg = this.arg.bind(this)
-  W.parallel = this.parallel.bind(this)
-  W.sync = this.sync.bind(this)
+  var next = createCallbacks(this.next.bind(this), this.error.bind(this))
+  next.parallel = this.parallel.bind(this)
+  next.sync = this.sync.bind(this)
 
   var passedArgs
-  if (opts.prepend) passedArgs = ([ W ]).concat(args)
-  else passedArgs = args.concat([ W ])
+  if (opts.prepend) passedArgs = ([ next ]).concat(args)
+  else passedArgs = args.concat([ next ])
   this.iterator = gen.apply(opts.context || this, passedArgs)
 }
 util.inherits(Watt, EventEmitter)
@@ -75,7 +68,7 @@ function wrapAll (object, opts) {
     for (name of names) wrapAndBind(name)
   } else {
     for (name in object) {
-      if (object[name].constructor &&
+      if (object[name] && object[name].constructor &&
       object[name].constructor.name === 'GeneratorFunction') wrapAndBind(name)
     }
   }
@@ -153,11 +146,6 @@ Watt.prototype.onRes = function (res) {
   }
 }
 
-Watt.prototype.cb = function (err, v) {
-  if (err) return this.error(err)
-  this.next(v)
-}
-
 Watt.prototype.error = function (err) {
   if (!err) return
   try {
@@ -168,53 +156,73 @@ Watt.prototype.error = function (err) {
   this.onRes(res)
 }
 
-Watt.prototype.args = function () {
-  this.next(arguments)
+Watt.prototype._getSyncGroup = function () {
+  if (this._syncGroup) return this._syncGroup
+  this._syncGroup = {
+    running: 0,
+    finished: 0,
+    results: [],
+    error: null
+  }
+  return this._syncGroup
 }
 
-Watt.prototype.arg = function (n, ignoreError) {
+Watt.prototype.parallel = function () {
   var self = this
-  if (n === 0) ignoreError = true
-  var output = function (err) {
-    if (!ignoreError && err) {
-      return self.error(err)
-    }
-    self.next(arguments[n])
-  }
-  return output
-}
+  var syncGroup = this._getSyncGroup()
+  var i = syncGroup.running
+  syncGroup.running += 1
 
-Watt.prototype.parallel = function (opts, gen, args) {
-  if (typeof opts === 'function') {
-    args = gen
-    gen = opts
-    opts = {}
+  var next = function (value) {
+    if (self._syncGroup !== syncGroup) return
+    syncGroup.running -= 1
+    syncGroup.finished += 1
+    syncGroup.results[i] = value
+    if (syncGroup.running === 0 && syncGroup.onFinish) syncGroup.onFinish()
   }
 
-  var index = opts.index = opts.index != null ? opts.index : this._tasks.size
-  if (opts.limit != null && this._tasks.size > opts.limit) {
-    this._taskQueue.push([ opts, gen, args ])
-    this._taskQueue.sort((a, b) => b[0].limit - a[0].limit)
-    return
+  var error = function (err) {
+    if (self._syncGroup !== syncGroup) return
+    syncGroup.error = err
+    if (syncGroup.onFinish) syncGroup.onFinish()
   }
 
-  var task = new Watt(gen, args, (err, res) => {
-    this._tasks.delete(task)
-    this.error(err)
-    this._taskResults[index] = res
-    while (this._taskQueue.length && this._taskQueue[0][0].limit >= this._tasks.size) {
-      this.parallel.apply(this, this._taskQueue.shift())
-    }
-    if (this._tasks.size === 0) {
-      this.emit('sync', this._taskResults)
-      this._taskResults = []
-    }
-  })
-  this._tasks.add(task)
-  task.run()
+  return createCallbacks(next, error)
 }
 
 Watt.prototype.sync = function () {
-  if (this._tasks.size === 0) return this.next(null)
-  this.once('sync', this.arg(0))
+  var syncGroup = this._syncGroup
+  return new Promise((next, error) => {
+    if (!syncGroup) return next(null)
+    function onFinish (next, error) {
+      if (syncGroup.onFinish) this._syncGroup = null
+      if (syncGroup.error) return error(syncGroup.error)
+      if (syncGroup.running === 0) return next(syncGroup.results)
+      if (!syncGroup.onFinish) syncGroup.onFinish = () => onFinish(next, error)
+    }
+    onFinish(next, error)
+  })
+}
+
+function createCallbacks (next, error) {
+  var callback = function (err, v) {
+    if (err) return error(err)
+    next(v)
+  }
+
+  callback.error = error
+
+  callback.args = function () {
+    next(arguments)
+  }
+
+  callback.arg = function (n, ignoreError) {
+    if (n === 0) ignoreError = true
+    return function (err) {
+      if (!ignoreError && err) return error(err)
+      next(arguments[n])
+    }
+  }
+
+  return callback
 }
