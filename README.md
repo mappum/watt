@@ -132,6 +132,26 @@ var data = args[1]
 ```
 
 ----
+### `next.parallel()`, `next.sync()`
+
+Call `next.parallel()` to execute async calls in parallel, then call `yield next.sync()` to wait for these tasks to finish. The result of `next.sync()` will be an array of the result values of tasks, in the order they were spawned. `next.sync()` will unyield as soon as a task gives an error, or when all the tasks have finished.
+
+`next.parallel()` returns a callback similar to `next`, which treats the first value as an error and the second as the return value. Like `next`, this callback also has the `arg` and `args` properties.
+
+Note that you should not `yield` before a parallel call since we don't want the generator to block until the call to `sync`.
+
+Example:
+```js
+for (var i = 0; i < 5; i++) {
+  // waits a random amount of time, then returns i
+  setTimeout(next.parallel().arg(0), Math.random() * 1000, i)
+}
+// wait until all timeouts have finished
+var res = yield next.sync()
+// res is: [ 0, 1, 2, 3, 4 ]
+```
+
+----
 ### `watt.wrapAll(object, [opts], [names...])`
 
 Wraps generator function properties of `object`. Each wrapped generator function gets bound to the context of `object`. If no values are specified for `names`, all generator function properties are wrapped. If one or more strings are specified for `names`, only the properties with those keys will be wrapped.
