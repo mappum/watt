@@ -370,6 +370,15 @@ test('parallel', t => {
       t.equal(res[6], 6, 'correct res values with arg(n, true)')
       t.equal(res[7][0], 6, 'correct res values with args')
       t.equal(res[7][1], 7, 'correct res values with args')
+
+      setTimeout(next.parallel(), 20, null, 123)
+      setTimeout(next.parallel(), 21, null, 456)
+      res = yield next.sync()
+      t.pass('resumed after second sync')
+      t.ok(Array.isArray(res), 'got results')
+      t.equal(res[0], 123, 'correct res values')
+      t.equal(res[1], 456, 'correct res values')
+
       t.end()
     })()
   })
