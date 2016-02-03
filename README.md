@@ -238,7 +238,7 @@ function countUp (n, cb) {
   function next (i) {
     setTimeout(function () {
       console.log(i)
-      next(i + 1)
+      if (i < n) next(i + 1)
     }, 1000)
   }
   next(0)
@@ -301,7 +301,7 @@ var foo = async(function * (next) {
 }
 
 var bar = async(function * (next) {
-  return yield a() // 'next' not necessary
+  return yield foo() // 'next' not necessary
 })
 
 // callers can use the Promise API instead of a callback if they want
