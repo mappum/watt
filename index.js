@@ -60,6 +60,8 @@ function wrapAll (object, opts) {
   opts = Object.assign({ context: this }, opts)
 
   function wrapAndBind (name) {
+    if (!object[name] || !object[name].constructor ||
+      object[name].constructor.name !== 'GeneratorFunction') return
     object[name] = wrap(object[name], opts)
   }
 
@@ -67,10 +69,11 @@ function wrapAll (object, opts) {
   if (names.length > 0) {
     for (name of names) wrapAndBind(name)
   } else {
-    for (name in object) {
-      if (object[name] && object[name].constructor &&
-      object[name].constructor.name === 'GeneratorFunction') wrapAndBind(name)
+    if (object.constructor && object.constructor.prototype) {
+      var classProperties = Object.getOwnPropertyNames(object.constructor.prototype)
+      for (name of classProperties) wrapAndBind(name)
     }
+    for (name in object) wrapAndBind(name)
   }
 }
 
