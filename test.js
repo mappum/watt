@@ -402,3 +402,58 @@ test('parallel', (t) => {
 
   t.end()
 })
+
+test('wrapAll', (t) => {
+  t.test('simple wrapAll', (t) => {
+    var obj = {
+      a: function * (next) {
+        yield setTimeout(next, 10)
+        return this.n
+      },
+      b: function * () {},
+      n: 10
+    }
+    watt.wrapAll(obj)
+    t.equal(obj.a.constructor.name, 'Function', 'a got wrapped')
+    t.equal(obj.b.constructor.name, 'Function', 'b got wrapped')
+    var a = obj.a
+    a((err, res) => {
+      t.pass('cb called')
+      t.error(err, 'no error')
+      t.equal(res, 10, 'context bound to object')
+      t.end()
+    })
+  })
+
+  t.test('named wrapAll', (t) => {
+    var obj = {
+      a: function * () {},
+      b: function * () {}
+    }
+    watt.wrapAll(obj, 'a')
+    t.equal(obj.a.constructor.name, 'Function', 'a got wrapped')
+    t.equal(obj.b.constructor.name, 'GeneratorFunction', 'b didn\'t get wrapped')
+    t.end()
+  })
+
+  t.test('wrapAll with options', (t) => {
+    var obj = {
+      a: function * (next, arg) {
+        yield setTimeout(next, 10)
+        return arg
+      },
+      b: function * () {}
+    }
+    watt.wrapAll(obj, { prepend: true })
+    t.equal(obj.a.constructor.name, 'Function', 'a got wrapped')
+    t.equal(obj.b.constructor.name, 'Function', 'b got wrapped')
+    obj.a(10, (err, res) => {
+      t.pass('cb called')
+      t.error(err, 'no error')
+      t.equal(res, 10, 'correct argument order')
+      t.end()
+    })
+  })
+
+  t.end()
+})
