@@ -57,7 +57,7 @@ function wrap (gen, opts) {
 function wrapAll (object, opts) {
   var names = Array.prototype.slice.call(arguments, typeof opts === 'object' ? 2 : 1)
   if (typeof opts === 'string') opts = {}
-  opts = Object.assign({ context: this }, opts)
+  opts = Object.assign({ context: object }, opts)
 
   function wrapAndBind (name) {
     if (!object[name] || !object[name].constructor ||
