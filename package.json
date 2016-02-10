@@ -14,7 +14,7 @@
     "setimmediate": "^1.0.4"
   },
   "devDependencies": {
-    "standard": "^5.4.1",
+    "standard": "^6.0.4",
     "tap": "^5.1.1"
   }
 }

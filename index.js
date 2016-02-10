@@ -196,15 +196,15 @@ Watt.prototype.parallel = function () {
 Watt.prototype.sync = function () {
   var self = this
   var syncGroup = this._syncGroup
-  return new Promise((next, error) => {
-    if (!syncGroup) return next(null)
-    function onFinish (next, error) {
+  return new Promise((resolve, reject) => {
+    if (!syncGroup) return resolve(null)
+    function onFinish (resolve, reject) {
       if (syncGroup.onFinish) self._syncGroup = null
-      if (syncGroup.error) return error(syncGroup.error)
-      if (syncGroup.running === 0) return next(syncGroup.results)
-      if (!syncGroup.onFinish) syncGroup.onFinish = () => onFinish(next, error)
+      if (syncGroup.error) return reject(syncGroup.error)
+      if (syncGroup.running === 0) return resolve(syncGroup.results)
+      if (!syncGroup.onFinish) syncGroup.onFinish = () => onFinish(resolve, reject)
     }
-    onFinish(next, error)
+    onFinish(resolve, reject)
   })
 }
 
