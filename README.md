@@ -23,11 +23,9 @@ ES6 introduced generators, which are functions that can be paused and resumed us
 
 ```js
 function copyFile (source, dest, callback) {
-  fs.exists(source, function (err, exists) {
-    if (err) return callback(err)
+  fs.exists(source, function (exists) {
     if (!exists) return callback('Source does not exist')
-    fs.exists(dest, function (err, exists) {
-      if (err) return callback(err)
+    fs.exists(dest, function (exists) {
       if (exists) return callback('Dest already exists')
       fs.readFile(source, function (err, data) {
         if (err) return callback(err)
@@ -43,8 +41,8 @@ function copyFile (source, dest, callback) {
 **After `watt`:**
 ```js
 var copyFile = watt(function * (source, dest, next) {
-  if (!(yield fs.exists(source, next))) throw 'Source does not exist'
-  if (yield fs.exists(dest, next)) throw 'Dest already exists'
+  if (!(yield fs.exists(source, next.arg(0)))) throw 'Source does not exist'
+  if (yield fs.exists(dest, next.arg(0))) throw 'Dest already exists'
   var data = yield fs.readFile(source, next)
   yield fs.writeFile(dest, data, next)
 })
