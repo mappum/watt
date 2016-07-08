@@ -457,3 +457,22 @@ test('wrapAll', (t) => {
 
   t.end()
 })
+
+test('rethrow error', (t) => {
+  t.plan(2)
+
+  var a = watt(function * () {
+    throw new Error('a')
+  })
+  var b = watt(function * () {
+    try {
+      yield a()
+    } catch (err) {
+      t.equal(err.message, 'a', 'catch thrown error')
+      throw new Error('a and b')
+    }
+  })
+  b().then(t.error, function (err) {
+    t.equal(err.message, 'a and b', 'catch rethrown error')
+  })
+})

@@ -153,7 +153,7 @@ Watt.prototype.error = function (err) {
   if (!err) return
   try {
     var res = this.iterator.throw(err)
-  } catch (e) {
+  } catch (err) {
     return this._callCb(err)
   }
   this.onRes(res)
